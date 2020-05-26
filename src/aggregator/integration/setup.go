@@ -259,18 +259,19 @@ func (ts *testServerSetup) startServer() error {
 	}
 
 	instrumentOpts := instrument.NewOptions()
+	serverOpts := serve.NewOptions(instrumentOpts).
+		SetM3msgAddr(ts.m3msgAddr).
+		SetM3msgServerOpts(ts.m3msgServerOpts).
+		SetRawTCPAddr(ts.rawTCPAddr).
+		SetRawTCPServerOpts(ts.rawTCPServerOpts).
+		SetHTTPAddr(ts.httpAddr).
+		SetHTTPServerOpts(ts.httpServerOpts)
 
 	go func() {
 		if err := serve.Serve(
-			ts.m3msgAddr,
-			ts.m3msgServerOpts,
-			ts.rawTCPAddr,
-			ts.rawTCPServerOpts,
-			ts.httpAddr,
-			ts.httpServerOpts,
 			ts.aggregator,
 			ts.doneCh,
-			instrumentOpts,
+			serverOpts,
 		); err != nil {
 			select {
 			case errCh <- err:

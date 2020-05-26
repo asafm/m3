@@ -28,6 +28,7 @@ import (
 	"github.com/m3db/m3/src/msg/protocol/proto"
 	"github.com/m3db/m3/src/msg/topic"
 	"github.com/m3db/m3/src/x/instrument"
+	xio "github.com/m3db/m3/src/x/io"
 	"github.com/m3db/m3/src/x/pool"
 	"github.com/m3db/m3/src/x/retry"
 )
@@ -357,6 +358,12 @@ type Options interface {
 
 	// SetInstrumentOptions sets the instrument options.
 	SetInstrumentOptions(value instrument.Options) Options
+
+	// SetRWOptions sets RW options.
+	SetRWOptions(value xio.Options) Options
+
+	// RWOptions returns the RW options.
+	RWOptions() xio.Options
 }
 
 type writerOptions struct {
@@ -378,6 +385,7 @@ type writerOptions struct {
 	decOpts                           proto.Options
 	cOpts                             ConnectionOptions
 	iOpts                             instrument.Options
+	rwOpts                            xio.Options
 }
 
 // NewOptions creates Options.
@@ -397,6 +405,7 @@ func NewOptions() Options {
 		decOpts:                           proto.NewOptions(),
 		cOpts:                             NewConnectionOptions(),
 		iOpts:                             instrument.NewOptions(),
+		rwOpts:                            xio.NewOptions(),
 	}
 }
 
@@ -578,4 +587,14 @@ func (opts *writerOptions) SetInstrumentOptions(value instrument.Options) Option
 	o := *opts
 	o.iOpts = value
 	return &o
+}
+
+func (opts *writerOptions) SetRWOptions(value xio.Options) Options {
+	o := *opts
+	o.rwOpts = value
+	return &o
+}
+
+func (opts *writerOptions) RWOptions() xio.Options {
+	return opts.rwOpts
 }

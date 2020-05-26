@@ -50,6 +50,7 @@ import (
 	"github.com/m3db/m3/src/x/instrument"
 	"github.com/m3db/m3/src/x/pool"
 	"github.com/m3db/m3/src/x/retry"
+	"github.com/m3db/m3/src/x/server"
 	"github.com/m3db/m3/src/x/sync"
 )
 
@@ -249,6 +250,7 @@ type InstanceIDConfiguration struct {
 func (c *AggregatorConfiguration) NewAggregatorOptions(
 	address string,
 	client client.Client,
+	serverOpts server.Options,
 	runtimeOptsManager aggruntime.OptionsManager,
 	instrumentOpts instrument.Options,
 ) (aggregator.Options, error) {
@@ -282,7 +284,8 @@ func (c *AggregatorConfiguration) NewAggregatorOptions(
 	// Set administrative client.
 	// TODO(xichen): client retry threshold likely needs to be low for faster retries.
 	iOpts = instrumentOpts.SetMetricsScope(scope.SubScope("client"))
-	adminClient, err := c.Client.NewAdminClient(client, clock.NewOptions(), iOpts)
+	adminClient, err := c.Client.NewAdminClient(
+		client, serverOpts, clock.NewOptions(), iOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +378,7 @@ func (c *AggregatorConfiguration) NewAggregatorOptions(
 
 	// Set flushing handler.
 	iOpts = instrumentOpts.SetMetricsScope(scope.SubScope("flush-handler"))
-	flushHandler, err := c.Flush.NewHandler(client, iOpts)
+	flushHandler, err := c.Flush.NewHandler(client, iOpts, adminClient.RWOpts())
 	if err != nil {
 		return nil, err
 	}

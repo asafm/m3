@@ -33,6 +33,7 @@ import (
 
 	clusterclient "github.com/m3db/m3/src/cluster/client"
 	etcdclient "github.com/m3db/m3/src/cluster/client/etcd"
+	"github.com/m3db/m3/src/cmd/services/m3aggregator/serve"
 	"github.com/m3db/m3/src/cmd/services/m3coordinator/downsample"
 	"github.com/m3db/m3/src/cmd/services/m3coordinator/ingest"
 	ingestcarbon "github.com/m3db/m3/src/cmd/services/m3coordinator/ingest/carbon"
@@ -63,6 +64,7 @@ import (
 	"github.com/m3db/m3/src/x/clock"
 	xconfig "github.com/m3db/m3/src/x/config"
 	"github.com/m3db/m3/src/x/instrument"
+	xio "github.com/m3db/m3/src/x/io"
 	xnet "github.com/m3db/m3/src/x/net"
 	xos "github.com/m3db/m3/src/x/os"
 	"github.com/m3db/m3/src/x/pool"
@@ -154,6 +156,9 @@ type RunOptions struct {
 
 	// BackendStorageTransform is a custom backend storage transform.
 	BackendStorageTransform BackendStorageTransform
+
+	// ServeOptions are serve options for aggregator.
+	ServeOptions serve.Options
 }
 
 // InstrumentOptionsReady is a set of instrument options
@@ -607,9 +612,18 @@ func newM3DBStorage(
 			return nil, nil, nil, nil, err
 		}
 
+		var rwOpts xio.Options
+		if opts := runOpts.ServeOptions; opts != nil {
+			rwOpts = opts.RWOptions()
+		} else {
+			rwOpts = xio.NewOptions()
+		}
+
 		newDownsamplerFn := func() (downsample.Downsampler, error) {
-			downsampler, err := newDownsampler(cfg.Downsample, clusterClient,
-				fanoutStorage, autoMappingRules, tsdbOpts.TagOptions(), instrumentOptions)
+			downsampler, err := newDownsampler(
+				cfg.Downsample, clusterClient,
+				fanoutStorage, autoMappingRules,
+				tsdbOpts.TagOptions(), instrumentOptions, rwOpts)
 			if err != nil {
 				return nil, err
 			}
@@ -666,6 +680,7 @@ func newDownsampler(
 	autoMappingRules []downsample.AutoMappingRule,
 	tagOptions models.TagOptions,
 	instrumentOpts instrument.Options,
+	rwOpts xio.Options,
 ) (downsample.Downsampler, error) {
 	// Namespace the downsampler metrics.
 	instrumentOpts = instrumentOpts.SetMetricsScope(
@@ -705,6 +720,7 @@ func newDownsampler(
 		TagEncoderPoolOptions: tagEncoderPoolOptions,
 		TagDecoderPoolOptions: tagDecoderPoolOptions,
 		TagOptions:            tagOptions,
+		RWOptions:             rwOpts,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to create downsampler: %v", err)

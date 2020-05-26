@@ -79,6 +79,7 @@ type writer struct {
 }
 
 // NewWriter creates a new writer.
+// here
 func NewWriter(opts Options) producer.Writer {
 	w := &writer{
 		topic:                  opts.TopicName(),

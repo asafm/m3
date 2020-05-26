@@ -31,6 +31,7 @@ import (
 	"github.com/m3db/m3/src/msg/protocol/proto"
 	"github.com/m3db/m3/src/msg/topic"
 	"github.com/m3db/m3/src/x/instrument"
+	xio "github.com/m3db/m3/src/x/io"
 	"github.com/m3db/m3/src/x/pool"
 	"github.com/m3db/m3/src/x/retry"
 
@@ -108,11 +109,13 @@ type WriterConfiguration struct {
 func (c *WriterConfiguration) NewOptions(
 	cs client.Client,
 	iOpts instrument.Options,
+	rwOptions xio.Options,
 ) (writer.Options, error) {
 	opts := writer.NewOptions().
 		SetTopicName(c.TopicName).
 		SetPlacementOptions(c.PlacementOptions.NewOptions()).
-		SetInstrumentOptions(iOpts)
+		SetInstrumentOptions(iOpts).
+		SetRWOptions(rwOptions)
 
 	kvOpts, err := c.TopicServiceOverride.NewOverrideOptions()
 	if err != nil {

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,40 +18,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package io
 
 import (
-	"flag"
-	"fmt"
-	"os"
-
-	"github.com/m3db/m3/src/aggregator/client"
-	"github.com/m3db/m3/src/aggregator/server"
-	"github.com/m3db/m3/src/cmd/services/m3aggregator/config"
-	xconfig "github.com/m3db/m3/src/x/config"
-	"github.com/m3db/m3/src/x/config/configflag"
-	"github.com/m3db/m3/src/x/etcd"
+	"bufio"
+	"io"
 )
 
-func main() {
-	var cfgOpts configflag.Options
-	cfgOpts.Register()
+// ResettableWriter is a resettable writer.
+type ResettableWriter interface {
+	io.Writer
+	Flush() error
+	Reset(w io.Writer)
+}
 
-	flag.Parse()
+// ResettableWriterOptions are options for a resettable writer.
+type ResettableWriterOptions struct {
+	WriteBufferSize int
+}
 
-	// Set globals for etcd related packages.
-	etcd.SetGlobals()
+// ResettableWriterFn creates a resettable writer.
+type ResettableWriterFn func(r io.Writer, opts ResettableWriterOptions) ResettableWriter
 
-	var cfg config.Configuration
-	if err := cfgOpts.MainLoad(&cfg, xconfig.Options{}); err != nil {
-		// NB(r): Use fmt.Fprintf(os.Stderr, ...) to avoid etcd.SetGlobals()
-		// sending stdlib "log" to black hole. Don't remove unless with good reason.
-		fmt.Fprintf(os.Stderr, "error loading config: %v\n", err)
-		os.Exit(1)
+// defaultResettableWriterFn creates a default resettable writer.
+func defaultResettableWriterFn() ResettableWriterFn {
+	return func(r io.Writer, opts ResettableWriterOptions) ResettableWriter {
+		return bufio.NewWriterSize(r, opts.WriteBufferSize)
 	}
-
-	server.Run(server.RunOptions{
-		Config:        cfg,
-		ClientOptions: []client.OptionTransform{},
-	})
 }

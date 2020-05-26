@@ -21,7 +21,6 @@
 package writer
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -32,6 +31,7 @@ import (
 	"github.com/m3db/m3/src/msg/generated/proto/msgpb"
 	"github.com/m3db/m3/src/msg/protocol/proto"
 	"github.com/m3db/m3/src/x/clock"
+	xio "github.com/m3db/m3/src/x/io"
 	"github.com/m3db/m3/src/x/retry"
 
 	"github.com/uber-go/tally"
@@ -43,9 +43,8 @@ const (
 )
 
 var (
-	u uninitializedReadWriter
-
 	errInvalidConnection = errors.New("connection is invalid")
+	u                    uninitializedReadWriter
 )
 
 type consumerWriter interface {
@@ -133,7 +132,8 @@ type consumerWriterImplWriteState struct {
 type connection struct {
 	writeLock sync.Mutex
 	conn      io.ReadWriteCloser
-	rw        *bufio.ReadWriter
+	r         xio.ResettableReader
+	w         xio.ResettableWriter
 	decoder   proto.Decoder
 	ack       msgpb.Ack
 }
@@ -210,7 +210,7 @@ func (w *consumerWriterImpl) Write(connIndex int, b []byte) error {
 
 	// Make sure only writer to this connection.
 	writeConn.writeLock.Lock()
-	_, err := writeConn.rw.Write(b)
+	_, err := writeConn.w.Write(b)
 	writeConn.writeLock.Unlock()
 
 	// Hold onto the write state lock until done, since flushing and
@@ -257,7 +257,7 @@ func (w *consumerWriterImpl) flushUntilClose() {
 		case <-flushTicker.C:
 			w.writeState.Lock()
 			for _, conn := range w.writeState.conns {
-				if err := conn.rw.Flush(); err != nil {
+				if err := conn.w.Flush(); err != nil {
 					w.notifyReset(err)
 				}
 			}
@@ -416,19 +416,34 @@ func (w *consumerWriterImpl) reset(opts resetOptions) {
 		}
 	}()
 
+	var (
+		rOpts = xio.ResettableReaderOptions{
+			ReadBufferSize: w.connOpts.ReadBufferSize(),
+		}
+
+		wOpts = xio.ResettableWriterOptions{
+			WriteBufferSize: w.connOpts.WriteBufferSize(),
+		}
+
+		rwOpts   = w.opts.RWOptions()
+		readerFn = rwOpts.ResettableReaderFn()
+		writerFn = rwOpts.ResettableWriterFn()
+	)
+
+	w.opts.ConnectionOptions()
 	w.writeState.conns = make([]*connection, 0, len(opts.connections))
 	for _, conn := range opts.connections {
-		rw := bufio.NewReadWriter(
-			bufio.NewReaderSize(u, w.connOpts.ReadBufferSize()),
-			bufio.NewWriterSize(u, w.connOpts.WriteBufferSize()))
-		rw.Reader.Reset(conn)
-		rw.Writer.Reset(conn)
+		r := readerFn(u, rOpts)
+		r.Reset(conn)
+		wr := writerFn(u, wOpts)
+		wr.Reset(conn)
 
-		decoder := proto.NewDecoder(rw, w.opts.DecoderOptions())
+		decoder := proto.NewDecoder(r, w.opts.DecoderOptions())
 
 		newConn := &connection{
 			conn:    conn,
-			rw:      rw,
+			r:       r,
+			w:       wr,
 			decoder: decoder,
 		}
 

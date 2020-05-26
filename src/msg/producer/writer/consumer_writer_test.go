@@ -234,7 +234,7 @@ func TestConsumerWriterFlushWriteAfterFlushErrorTriggerReset(t *testing.T) {
 	require.NoError(t, write(w, &testMsg))
 
 	w.writeState.Lock()
-	require.Error(t, w.writeState.conns[0].rw.Flush())
+	require.Error(t, w.writeState.conns[0].w.Flush())
 	w.writeState.Unlock()
 
 	// Flush err will be stored in bufio.Writer, the next time

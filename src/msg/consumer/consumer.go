@@ -21,13 +21,13 @@
 package consumer
 
 import (
-	"bufio"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/m3db/m3/src/msg/generated/proto/msgpb"
 	"github.com/m3db/m3/src/msg/protocol/proto"
+	xio "github.com/m3db/m3/src/x/io"
 
 	"github.com/uber-go/tally"
 )
@@ -92,7 +92,7 @@ type consumer struct {
 	mPool   *messagePool
 	encoder proto.Encoder
 	decoder proto.Decoder
-	w       *bufio.Writer
+	w       xio.ResettableWriter
 	conn    net.Conn
 
 	ackPb  msgpb.Ack
@@ -108,15 +108,29 @@ func newConsumer(
 	opts Options,
 	m metrics,
 ) *consumer {
+	var (
+		rOpts = xio.ResettableReaderOptions{
+			ReadBufferSize: opts.ConnectionReadBufferSize(),
+		}
+
+		wOpts = xio.ResettableWriterOptions{
+			WriteBufferSize: opts.ConnectionWriteBufferSize(),
+		}
+
+		rwOpts   = opts.RWOptions()
+		readerFn = rwOpts.ResettableReaderFn()
+		writerFn = rwOpts.ResettableWriterFn()
+	)
+
 	return &consumer{
 		opts:    opts,
 		mPool:   mPool,
 		encoder: proto.NewEncoder(opts.EncoderOptions()),
 		decoder: proto.NewDecoder(
-			bufio.NewReaderSize(conn, opts.ConnectionReadBufferSize()),
+			readerFn(conn, rOpts),
 			opts.DecoderOptions(),
 		),
-		w:      bufio.NewWriterSize(conn, opts.ConnectionWriteBufferSize()),
+		w:      writerFn(conn, wOpts),
 		conn:   conn,
 		closed: false,
 		doneCh: make(chan struct{}),
