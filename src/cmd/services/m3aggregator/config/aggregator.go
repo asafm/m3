@@ -42,6 +42,7 @@ import (
 	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
+	"github.com/m3db/m3/src/cmd/services/m3aggregator/serve"
 	"github.com/m3db/m3/src/metrics/aggregation"
 	"github.com/m3db/m3/src/metrics/pipeline/applied"
 	"github.com/m3db/m3/src/metrics/policy"
@@ -50,7 +51,6 @@ import (
 	"github.com/m3db/m3/src/x/instrument"
 	"github.com/m3db/m3/src/x/pool"
 	"github.com/m3db/m3/src/x/retry"
-	"github.com/m3db/m3/src/x/server"
 	"github.com/m3db/m3/src/x/sync"
 )
 
@@ -250,7 +250,7 @@ type InstanceIDConfiguration struct {
 func (c *AggregatorConfiguration) NewAggregatorOptions(
 	address string,
 	client client.Client,
-	serverOpts server.Options,
+	serveOpts serve.Options,
 	runtimeOptsManager aggruntime.OptionsManager,
 	instrumentOpts instrument.Options,
 ) (aggregator.Options, error) {
@@ -259,6 +259,7 @@ func (c *AggregatorConfiguration) NewAggregatorOptions(
 		SetRuntimeOptionsManager(runtimeOptsManager).
 		SetVerboseErrors(c.VerboseErrors)
 
+	rwOpts := serveOpts.RWOptions()
 	// Set the aggregation types options.
 	aggTypesOpts, err := c.AggregationTypes.NewOptions(instrumentOpts)
 	if err != nil {
@@ -285,7 +286,7 @@ func (c *AggregatorConfiguration) NewAggregatorOptions(
 	// TODO(xichen): client retry threshold likely needs to be low for faster retries.
 	iOpts = instrumentOpts.SetMetricsScope(scope.SubScope("client"))
 	adminClient, err := c.Client.NewAdminClient(
-		client, serverOpts, clock.NewOptions(), iOpts)
+		client, clock.NewOptions(), iOpts, rwOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +379,7 @@ func (c *AggregatorConfiguration) NewAggregatorOptions(
 
 	// Set flushing handler.
 	iOpts = instrumentOpts.SetMetricsScope(scope.SubScope("flush-handler"))
-	flushHandler, err := c.Flush.NewHandler(client, iOpts, adminClient.RWOpts())
+	flushHandler, err := c.Flush.NewHandler(client, iOpts, rwOpts)
 	if err != nil {
 		return nil, err
 	}
