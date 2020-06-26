@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/m3db/m3/src/aggregator/client"
 	"github.com/m3db/m3/src/aggregator/server"
 	"github.com/m3db/m3/src/cmd/services/m3aggregator/config"
 	xconfig "github.com/m3db/m3/src/x/config"
@@ -51,7 +50,6 @@ func main() {
 	}
 
 	server.Run(server.RunOptions{
-		Config:        cfg,
-		ClientOptions: []client.OptionTransform{},
+		Config: cfg,
 	})
 }
