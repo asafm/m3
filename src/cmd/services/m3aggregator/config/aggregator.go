@@ -49,6 +49,7 @@ import (
 	"github.com/m3db/m3/src/x/clock"
 	"github.com/m3db/m3/src/x/config/hostid"
 	"github.com/m3db/m3/src/x/instrument"
+	xio "github.com/m3db/m3/src/x/io"
 	"github.com/m3db/m3/src/x/pool"
 	"github.com/m3db/m3/src/x/retry"
 	"github.com/m3db/m3/src/x/sync"
@@ -260,6 +261,9 @@ func (c *AggregatorConfiguration) NewAggregatorOptions(
 		SetVerboseErrors(c.VerboseErrors)
 
 	rwOpts := serveOpts.RWOptions()
+	if rwOpts == nil {
+		rwOpts = xio.NewOptions()
+	}
 	// Set the aggregation types options.
 	aggTypesOpts, err := c.AggregationTypes.NewOptions(instrumentOpts)
 	if err != nil {

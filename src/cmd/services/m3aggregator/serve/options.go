@@ -100,7 +100,7 @@ func NewOptions(iOpts instrument.Options) Options {
 
 func (o *options) SetM3msgAddr(value string) Options {
 	opts := *o
-	o.m3msgAddr = value
+	opts.m3msgAddr = value
 	return &opts
 }
 
@@ -110,7 +110,7 @@ func (o *options) M3msgAddr() string {
 
 func (o *options) SetM3msgServerOpts(value m3msgserver.Options) Options {
 	opts := *o
-	o.m3msgServerOpts = value
+	opts.m3msgServerOpts = value
 	return &opts
 }
 
@@ -120,7 +120,7 @@ func (o *options) M3msgServerOpts() m3msgserver.Options {
 
 func (o *options) SetRawTCPAddr(value string) Options {
 	opts := *o
-	o.rawTCPAddr = value
+	opts.rawTCPAddr = value
 	return &opts
 }
 
@@ -130,7 +130,7 @@ func (o *options) RawTCPAddr() string {
 
 func (o *options) SetRawTCPServerOpts(value rawtcpserver.Options) Options {
 	opts := *o
-	o.rawTCPServerOpts = value
+	opts.rawTCPServerOpts = value
 	return &opts
 }
 
@@ -140,7 +140,7 @@ func (o *options) RawTCPServerOpts() rawtcpserver.Options {
 
 func (o *options) SetHTTPAddr(value string) Options {
 	opts := *o
-	o.httpAddr = value
+	opts.httpAddr = value
 	return &opts
 }
 
@@ -150,7 +150,7 @@ func (o *options) HTTPAddr() string {
 
 func (o *options) SetHTTPServerOpts(value httpserver.Options) Options {
 	opts := *o
-	o.httpServerOpts = value
+	opts.httpServerOpts = value
 	return &opts
 }
 
@@ -160,7 +160,7 @@ func (o *options) HTTPServerOpts() httpserver.Options {
 
 func (o *options) SetInstrumentOpts(value instrument.Options) Options {
 	opts := *o
-	o.iOpts = value
+	opts.iOpts = value
 	return &opts
 }
 

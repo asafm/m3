@@ -25,6 +25,7 @@ import (
 
 	"github.com/m3db/m3/src/msg/protocol/proto"
 	"github.com/m3db/m3/src/x/instrument"
+	xio "github.com/m3db/m3/src/x/io"
 	"github.com/m3db/m3/src/x/pool"
 )
 
@@ -92,5 +93,6 @@ func (c *Configuration) NewOptions(iOpts instrument.Options) Options {
 	if c.ConnectionReadBufferSize != nil {
 		opts = opts.SetConnectionReadBufferSize(*c.ConnectionReadBufferSize)
 	}
+	opts.SetRWOptions(xio.NewOptions())
 	return opts
 }
