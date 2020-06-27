@@ -143,7 +143,7 @@ func Run(opts RunOptions) {
 
 	// Create the aggregator.
 	aggregatorOpts, err := cfg.Aggregator.NewAggregatorOptions(
-		cfg.RawTCP.ListenAddress,
+		serverOptions.RawTCPAddr(),
 		client, serverOptions, runtimeOptsManager,
 		instrumentOpts.SetMetricsScope(scope.SubScope("aggregator")))
 	if err != nil {
