@@ -28,6 +28,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/m3db/m3/src/aggregator/server"
 	clusterclient "github.com/m3db/m3/src/cluster/client"
 	"github.com/m3db/m3/src/cmd/services/m3aggregator/serve"
 	"github.com/m3db/m3/src/cmd/services/m3collector/config"
@@ -53,8 +54,8 @@ type RunOptions struct {
 	// interrupt and shutdown the server.
 	InterruptCh <-chan error
 
-	// ServeOptions are serve options.
-	ServeOptions serve.Options
+	// AggregatorServerOptions are server options for aggregator.
+	AggregatorServerOptions []server.AdminOption
 }
 
 // Run runs the server programmatically given a filename for the configuration file.
@@ -90,13 +91,17 @@ func Run(runOpts RunOptions) {
 		logger.Fatal("could not create etcd client", zap.Error(err))
 	}
 
-	var rwOpts xio.Options
-	if opts := runOpts.ServeOptions; opts != nil {
-		rwOpts = opts.RWOptions()
-	} else {
-		rwOpts = xio.NewOptions()
+	serveOptions := serve.NewOptions(instrumentOptions)
+	for i, transform := range runOpts.AggregatorServerOptions {
+		if opts, err := transform(serveOptions); err != nil {
+			logger.Fatal("could not apply transform",
+				zap.Int("index", i), zap.Error(err))
+		} else {
+			serveOptions = opts
+		}
 	}
 
+	rwOpts := serveOptions.RWOptions()
 	logger.Info("creating reporter")
 	reporter, err := newReporter(cfg.Reporter, clusterClient, instrumentOpts, rwOpts)
 	if err != nil {

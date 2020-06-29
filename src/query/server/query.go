@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/m3db/m3/src/aggregator/server"
 	clusterclient "github.com/m3db/m3/src/cluster/client"
 	etcdclient "github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/m3db/m3/src/cmd/services/m3aggregator/serve"
@@ -157,8 +158,8 @@ type RunOptions struct {
 	// BackendStorageTransform is a custom backend storage transform.
 	BackendStorageTransform BackendStorageTransform
 
-	// ServeOptions are serve options for aggregator.
-	ServeOptions serve.Options
+	// AggregatorServerOptions are server options for aggregator.
+	AggregatorServerOptions []server.AdminOption
 }
 
 // InstrumentOptionsReady is a set of instrument options
@@ -612,18 +613,21 @@ func newM3DBStorage(
 			return nil, nil, nil, nil, err
 		}
 
-		var rwOpts xio.Options
-		if opts := runOpts.ServeOptions; opts != nil {
-			rwOpts = opts.RWOptions()
-		} else {
-			rwOpts = xio.NewOptions()
+		serveOptions := serve.NewOptions(instrumentOptions)
+		for i, transform := range runOpts.AggregatorServerOptions {
+			if opts, err := transform(serveOptions); err != nil {
+				logger.Fatal("could not apply transform",
+					zap.Int("index", i), zap.Error(err))
+			} else {
+				serveOptions = opts
+			}
 		}
 
 		newDownsamplerFn := func() (downsample.Downsampler, error) {
 			downsampler, err := newDownsampler(
 				cfg.Downsample, clusterClient,
 				fanoutStorage, autoMappingRules,
-				tsdbOpts.TagOptions(), instrumentOptions, rwOpts)
+				tsdbOpts.TagOptions(), instrumentOptions, serveOptions.RWOptions())
 			if err != nil {
 				return nil, err
 			}

@@ -93,6 +93,5 @@ func (c *Configuration) NewOptions(iOpts instrument.Options) Options {
 	if c.ConnectionReadBufferSize != nil {
 		opts = opts.SetConnectionReadBufferSize(*c.ConnectionReadBufferSize)
 	}
-	opts.SetRWOptions(xio.NewOptions())
-	return opts
+	return opts.SetRWOptions(xio.NewOptions())
 }
