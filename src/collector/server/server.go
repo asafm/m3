@@ -91,7 +91,7 @@ func Run(runOpts RunOptions) {
 		logger.Fatal("could not create etcd client", zap.Error(err))
 	}
 
-	serveOptions := serve.NewOptions(instrumentOptions)
+	serveOptions := serve.NewOptions(instrumentOpt)
 	for i, transform := range runOpts.AggregatorServerOptions {
 		if opts, err := transform(serveOptions); err != nil {
 			logger.Fatal("could not apply transform",
